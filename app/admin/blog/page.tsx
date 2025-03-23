@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Loader2, Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase-browser"
 
 interface BlogPost {
   id: string
@@ -19,10 +21,36 @@ export default function AdminBlogPage() {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const isMounted = useRef(true)
+
+  // Use a single supabase instance
+  const supabase = createClient()
+
+  useEffect(() => {
+    // Set up the cleanup function first
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
 
   useEffect(() => {
     const fetchBlogPosts = async () => {
       try {
+        // Check if user is authenticated
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session) {
+          // If not authenticated, redirect to login
+          if (isMounted.current) {
+            router.push("/admin/login")
+          }
+          return
+        }
+
+        // Fetch blog posts
         const response = await fetch("/api/blog/admin")
         const data = await response.json()
 
@@ -30,21 +58,25 @@ export default function AdminBlogPage() {
           throw new Error(data.error || "Failed to fetch blog posts")
         }
 
-        if (data.success) {
-          setBlogPosts(data.data)
-        } else {
-          throw new Error(data.error || "Failed to fetch blog posts")
+        if (isMounted.current) {
+          if (data.success) {
+            setBlogPosts(data.data)
+          } else {
+            throw new Error(data.error || "Failed to fetch blog posts")
+          }
+          setIsLoading(false)
         }
       } catch (error) {
         console.error("Error fetching blog posts:", error)
-        setError(error instanceof Error ? error.message : "An unexpected error occurred")
-      } finally {
-        setIsLoading(false)
+        if (isMounted.current) {
+          setError(error instanceof Error ? error.message : "An unexpected error occurred")
+          setIsLoading(false)
+        }
       }
     }
 
     fetchBlogPosts()
-  }, [])
+  }, [router])
 
   const togglePublishStatus = async (id: string, currentStatus: boolean) => {
     try {
@@ -107,6 +139,14 @@ export default function AdminBlogPage() {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -118,8 +158,8 @@ export default function AdminBlogPage() {
               New Post
             </Button>
           </Link>
-          <Link href="/" className="text-indigo-600 hover:text-indigo-800">
-            ← Back to home
+          <Link href="/admin/dashboard" className="text-indigo-600 hover:text-indigo-800">
+            ← Back to dashboard
           </Link>
         </div>
       </div>
@@ -130,11 +170,7 @@ export default function AdminBlogPage() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-        </div>
-      ) : blogPosts.length === 0 ? (
+      {blogPosts.length === 0 ? (
         <div className="bg-white shadow overflow-hidden sm:rounded-lg p-6 text-center">
           <p className="text-gray-500 mb-4">No blog posts yet.</p>
           <Link href="/admin/blog/new">

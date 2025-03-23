@@ -62,7 +62,7 @@ export function Navbar() {
           <div className="hidden md:block">
             <Button
               asChild
-              className="bg-white text-black hover:bg-white/90 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transform hover:-translate-y-1"
+              className="bg-white/20 backdrop-blur-md text-black border border-white/30 hover:bg-white/30 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transform hover:-translate-y-1"
             >
               <Link href="/waitlist">Join the Waitlist</Link>
             </Button>

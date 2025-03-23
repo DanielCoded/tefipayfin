@@ -2,11 +2,12 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase-browser"
 
 export default function EditBlogPostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -25,10 +26,35 @@ export default function EditBlogPostPage({ params }: { params: { id: string } })
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isMounted = useRef(true)
+
+  // Use a single supabase instance
+  const supabase = createClient()
 
   useEffect(() => {
-    const fetchBlogPost = async () => {
+    // Set up the cleanup function first
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const checkAuthAndFetchData = async () => {
       try {
+        // Check if user is authenticated
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session) {
+          // If not authenticated, redirect to login
+          if (isMounted.current) {
+            router.push("/admin/login")
+          }
+          return
+        }
+
+        // Fetch blog post data
         const response = await fetch(`/api/blog/admin?id=${params.id}`)
         const data = await response.json()
 
@@ -36,21 +62,25 @@ export default function EditBlogPostPage({ params }: { params: { id: string } })
           throw new Error(data.error || "Failed to fetch blog post")
         }
 
-        if (data.success && data.data) {
-          setFormData(data.data)
-        } else {
-          throw new Error(data.error || "Failed to fetch blog post")
+        if (isMounted.current) {
+          if (data.success && data.data) {
+            setFormData(data.data)
+          } else {
+            throw new Error(data.error || "Failed to fetch blog post")
+          }
+          setIsLoading(false)
         }
       } catch (error) {
         console.error("Error fetching blog post:", error)
-        setError(error instanceof Error ? error.message : "An unexpected error occurred")
-      } finally {
-        setIsLoading(false)
+        if (isMounted.current) {
+          setError(error instanceof Error ? error.message : "An unexpected error occurred")
+          setIsLoading(false)
+        }
       }
     }
 
-    fetchBlogPost()
-  }, [params.id])
+    checkAuthAndFetchData()
+  }, [params.id, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -96,9 +126,10 @@ export default function EditBlogPostPage({ params }: { params: { id: string } })
       }
     } catch (error) {
       console.error("Error updating blog post:", error)
-      setError(error instanceof Error ? error.message : "An unexpected error occurred")
-    } finally {
-      setIsSubmitting(false)
+      if (isMounted.current) {
+        setError(error instanceof Error ? error.message : "An unexpected error occurred")
+        setIsSubmitting(false)
+      }
     }
   }
 

@@ -2,11 +2,12 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase-browser"
 
 export default function NewBlogPostPage() {
   const router = useRouter()
@@ -23,6 +24,34 @@ export default function NewBlogPostPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isMounted = useRef(true)
+
+  // Use a single supabase instance
+  const supabase = createClient()
+
+  useEffect(() => {
+    // Set up the cleanup function first
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (!session && isMounted.current) {
+          router.push("/admin/login")
+        }
+      } catch (err) {
+        console.error("Error checking auth:", err)
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -80,9 +109,10 @@ export default function NewBlogPostPage() {
       }
     } catch (error) {
       console.error("Error creating blog post:", error)
-      setError(error instanceof Error ? error.message : "An unexpected error occurred")
-    } finally {
-      setIsSubmitting(false)
+      if (isMounted.current) {
+        setError(error instanceof Error ? error.message : "An unexpected error occurred")
+        setIsSubmitting(false)
+      }
     }
   }
 
