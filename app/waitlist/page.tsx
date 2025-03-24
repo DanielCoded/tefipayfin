@@ -1,8 +1,32 @@
+import type { Metadata } from "next"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { WaitlistForm } from "@/components/waitlist-form"
 import { BackgroundAnimation } from "@/components/background-animation"
 import Image from "next/image"
+
+export const metadata: Metadata = {
+  title: "Join Our Waitlist | TefiPay",
+  description:
+    "Be among the first to experience TefiPay's revolutionary contactless payment solution. Sign up for our exclusive waitlist and get early access.",
+  keywords: ["waitlist", "early access", "contactless payments", "fintech", "payment solution"],
+  alternates: {
+    canonical: "/waitlist",
+  },
+  openGraph: {
+    title: "Join TefiPay Waitlist | Get Early Access",
+    description:
+      "Be among the first to experience the future of contactless payments in Africa. Sign up for our exclusive waitlist today!",
+    images: [
+      {
+        url: "https://tefipay.com/waitlist-og.jpg",
+        width: 1200,
+        height: 630,
+        alt: "TefiPay Waitlist",
+      },
+    ],
+  },
+}
 
 export default function WaitlistPage() {
   return (

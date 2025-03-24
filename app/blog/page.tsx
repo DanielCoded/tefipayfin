@@ -1,9 +1,20 @@
+import type { Metadata } from "next"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { BackgroundAnimation } from "@/components/background-animation"
 import Link from "next/link"
 import Image from "next/image"
 import { createClient } from "@supabase/supabase-js"
+
+export const metadata: Metadata = {
+  title: "Blog | TefiPay",
+  description:
+    "Explore thought leadership articles, industry insights, and updates from the TefiPay team on contactless payments, fintech innovation, and digital transactions in Africa.",
+  keywords: ["fintech blog", "contactless payments", "digital transactions", "payment technology", "African fintech"],
+  alternates: {
+    canonical: "/blog",
+  },
+}
 
 // Create a Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
